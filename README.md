@@ -1,4 +1,4 @@
-##ReadMe##
+# ReadMe
 
 place params.txt file in dji-firmware-tools folder<br/>
 put all paramters of interest into params.txt in each line (examples are in)<br/>
@@ -11,4 +11,4 @@ choose a param and the values will be loaded<br/>
 change value and and press set value to set it<br/><br/><br/>
 
 
-##Use the tool at your own risk## ... it was at least tested with Mavic Mini.
+Use the tool at your own risk ... it was at least tested with Mavic Mini.
