@@ -1,0 +1,26 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.dji.comm.og.service</groupId>
+	<artifactId>tool</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+
+
+	<url>http://java.sun.com/products/javacomm/</url>
+	<distributionManagement>
+		<downloadUrl>http://www.sun.com/download/products.xml?id=43208d3d</downloadUrl>
+	</distributionManagement>
+
+	<dependencies>
+		<dependency>
+		   <groupId>com.fazecast</groupId>
+		   <artifactId>jSerialComm</artifactId>
+		   <version>[2.0.0,3.0.0)</version>
+		</dependency>
+		<dependency>
+		    <groupId>commons-io</groupId>
+		    <artifactId>commons-io</artifactId>
+		    <version>2.6</version>
+		</dependency>
+	</dependencies>
+</project>

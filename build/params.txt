@@ -1,0 +1,6 @@
+g_config.flying_limit.max_height_0
+vert_vel_down_adding_max_0
+g_config.mode_normal_cfg.vert_vel_down_0
+g_config.mode_sport_cfg.vert_vel_up_0
+g_config.mode_sport_cfg.vert_vel_up_0
+g_config.flying_limit.max_radius_0
