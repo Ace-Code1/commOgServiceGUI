@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -39,6 +41,10 @@ import com.dji.comm.og.service.utils.OutputParser;
 
 public class Application {
 
+	//Logger
+	private final static Logger LOGGER = Logger.getLogger(Application.class.getName());
+	
+	//Swing elements
 	private JFrame frmCommogservicegui;
 	private JTextField defaultTextField;
 	private JTextField minTextField;
@@ -49,6 +55,7 @@ public class Application {
 	public JComboBox comComboBox;
 	public FilterComboBox parameterComboBox;
 	public WaitDialog waitDialog;
+	public JComboBox aircraftComboBox;
 	
 	//selectedValues
 	public File selectedPath=null;
@@ -111,11 +118,13 @@ public class Application {
 	 * Initialize the contents of the frame.
 	 */
 	private void initialize() {
+		LOGGER.setLevel(Level.INFO);
+		LOGGER.info("initialize Window");
 		frmCommogservicegui = new JFrame();
 		frmCommogservicegui.addWindowListener(new WindowAdapter() {
 			@Override
 			public void windowOpened(WindowEvent e) {
-				//TODO open action
+				Application.this.actionOpenWindow();
 			}
 		});
 		frmCommogservicegui.setTitle("CommOgServiceGUI");
@@ -276,7 +285,8 @@ public class Application {
 		panel_2.add(pathTextField);
 		pathTextField.setColumns(10);
 		
-		JComboBox aircraftComboBox = new JComboBox();
+		LOGGER.info("load Aircrafts");
+		aircraftComboBox = new JComboBox();
 		aircraftComboBox.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent e) {
 				Application.this.actionSelectAircraft(e);
@@ -287,7 +297,6 @@ public class Application {
 		panel_2.add(aircraftComboBox);
 		List<String> ls = new ArrayList<String>(); 
 		aircraftComboBox.setModel(new DefaultComboBoxModel<String>(Aircrafts.AIRCRAFTS.keySet().toArray(new String[0])));
-		aircraftComboBox.setSelectedItem(START_AIRCRAFT);
 		
 		this.comComboBox = new JComboBox();
 		comComboBox.addItemListener(new ItemListener() {
@@ -298,9 +307,11 @@ public class Application {
 		this.comComboBox.setFont(new Font("Tahoma", Font.BOLD, 16));
 		this.comComboBox.setBounds(119, 92, 444, 26);
 		panel_2.add(comComboBox);
-		this.comComboBox.setModel(new DefaultComboBoxModel<String>(CommPortLister.getSerialPorts().keySet().toArray(new String[0])));
+		LOGGER.info("load available Com Ports");
+		HashMap<String,String> serialPorts=CommPortLister.getSerialPorts();
+		this.comComboBox.setModel(new DefaultComboBoxModel<String>(serialPorts.keySet().toArray(new String[0])));
 		if(this.comComboBox.getSelectedItem()!=null) {
-			Application.this.selectedComPort=CommPortLister.getSerialPorts().get(this.comComboBox.getSelectedItem().toString());
+			Application.this.selectedComPort=serialPorts.get(this.comComboBox.getSelectedItem().toString());
 		}
 		
 		JLabel lblNewLabel_1 = new JLabel("COM (USB)");
@@ -337,18 +348,20 @@ public class Application {
 		button.setFont(new Font("Tahoma", Font.BOLD, 16));
 		button.setBounds(578, 186, 105, 29);
 		panel_2.add(button);
-		Application.this.selectedAircraft=Aircrafts.AIRCRAFTS.get(START_AIRCRAFT);
 	}
 	
 	public void actionSetValue() {
+		LOGGER.info("try to set value");
 		if(!this.isAllFieldsSet(true,true,true,true)) {
+			LOGGER.info("actionSetValue: prevalidation failed");
 			return;
 		}			
 		try {
+			LOGGER.info("prepare and execute call");
 			CommandBuilder commandBuilder=new CommandBuilder(CommandBuilder.SET, Application.this.selectedPath, Application.SCRIPTING_LANGUAGE, Application.EXECUTABLE_FILE, this.selectedComPort, Application.this.selectedAircraft, this.selectedParam+PARAM_PREFIX,this.valueTextField.getText());
-			System.out.println(commandBuilder.getCommand());
+			LOGGER.info(commandBuilder.getCommand());
 			String output=CallProcess.executeCommand(commandBuilder.getCommand());
-			System.out.println(output);
+			LOGGER.info(output);
 			setSuccessText(SUCCESS_SETTING_VALUE);			
 		}catch(Throwable t) {
 			setErrorText(t.getMessage());
@@ -370,27 +383,33 @@ public class Application {
 			if(Application.this.selectedPath.isDirectory()) {
 				if(FileFinder.isFilePresent(Application.this.selectedPath,EXECUTABLE_FILE)) {
 					Application.this.pathTextField.setText(Application.this.selectedPath.getAbsolutePath());							
+					LOGGER.info("path set");
 				}
 				else {
 					setErrorText(ERROR_EXECUTABLE_NOT_FOUND);
 					Application.this.selectedPath=null;
+					LOGGER.info("no Executable found");
 				}
 			}
 			else {
 				setErrorText(ERROR_JUST_DIRECTORIES_ALLOWED);
 				Application.this.selectedPath=null;
+				LOGGER.info("no Directory");
 			}
 		}
 	}
 	
-	private void initializeAvailableParams2(){
+	private void initializeAvailableParamsFromFile(){
+		LOGGER.info("load prepared parameter");
 		if(!this.isAllFieldsSet(true,false,false,false)) {
+			LOGGER.info("initializeAvailableParamsFromFile: prevalidation failed");
 			return;
 		}
 		
 		File paramsFile=new File(this.selectedPath+File.separator+PARAM_FILE);
 		if(!paramsFile.exists()) {
 			this.setErrorText(ERROR_PARAM_FILE_NOT_FOUND);
+			LOGGER.info("no parameter file found");
 			return;
 		}
 	
@@ -407,6 +426,7 @@ public class Application {
 			Application.this.parameterComboBox.setEntries(params);
 			Application.this.availableParams=params;
 			setSuccessText(SUCCESS_PARAMETERS_LOADED);		
+			LOGGER.info("parameters loaded");
 			reader.close();
 		} catch (IOException ex) {
 			this.setErrorText(ex.getMessage());
@@ -451,31 +471,36 @@ public class Application {
 	}
 	
 	public void actionSelectParam(ItemEvent e) {
+		LOGGER.info("load selected parameter");
 		boolean isTextFieldNotEmpty=!"".equals(this.parameterComboBox.getEnteredText());
 		boolean isKnownParameter=this.availableParams.contains(this.parameterComboBox.getEnteredText());
 		boolean isSelectedValueEqualEntered=e.getItem().toString().equals(this.parameterComboBox.getEnteredText());
 				
 		if(isTextFieldNotEmpty && isKnownParameter && isSelectedValueEqualEntered) {
 			this.selectedParam=e.getItem().toString();
+			LOGGER.info("load selected parameter execute");
 			CommandBuilder commandBuilder;
 			try {
 				commandBuilder = new CommandBuilder(CommandBuilder.GET,this.selectedPath,Application.SCRIPTING_LANGUAGE,EXECUTABLE_FILE,this.selectedComPort,this.selectedAircraft,this.selectedParam);;
+				LOGGER.info("load selected parameter execute");
+				LOGGER.info("1st try");
 				String output=CallProcess.executeCommand(commandBuilder.getCommand());
 				if("".equals(output)) {
 					commandBuilder = new CommandBuilder(CommandBuilder.GET,this.selectedPath,Application.SCRIPTING_LANGUAGE,EXECUTABLE_FILE,this.selectedComPort,this.selectedAircraft,this.selectedParam+""+this.PARAM_PREFIX);
+					LOGGER.info(commandBuilder.getCommand());
 					output=CallProcess.executeCommand(commandBuilder.getCommand());
 				}
 				if("".equals(output)) {
 					setErrorText(ERROR_ON_GETTING_VALUE);
+					LOGGER.info("couldn't load parameter values");
 				}
 				else {
-					System.out.println(commandBuilder.getCommand());
-					System.out.println(output);
 					Param param=OutputParser.parseGetOutput(output);
 					this.minTextField.setText(param.getMinVal());
 					this.maxTextField.setText(param.getMaxVal());
 					this.defaultTextField.setText(param.getDefaultVal());
 					this.valueTextField.setText(param.getActVal());
+					LOGGER.info("parameter values loaded");
 					setSuccessText(SUCCESS_PAREMTER_VALUES_LOADED);
 				}
 			} catch (Exception e1) {
@@ -488,9 +513,11 @@ public class Application {
 	
 	public void actionSelectAircraft(ItemEvent e) {
 		this.selectedAircraft=Aircrafts.AIRCRAFTS.get(e.getItem().toString());
+		LOGGER.info("choosen "+this.selectedAircraft+" = "+e.getItem().toString());
 	}
 	
 	public void actionRefreshComPorts() {
+		LOGGER.info("refresh Com Ports");	
 		HashMap<String,String> commPorts=CommPortLister.getSerialPorts();
 		this.comComboBox.setModel(new DefaultComboBoxModel<String>(commPorts.keySet().toArray(new String[0])));
 		if(this.comComboBox.getSelectedItem()!=null) {
@@ -502,16 +529,18 @@ public class Application {
 	public void actionSelectCom(ItemEvent e) {
 		if(e.getItem()!=null) {
 			HashMap<String,String> commPorts=CommPortLister.getSerialPorts();
-			Application.this.selectedComPort=commPorts.get(e.getItem().toString());
+			this.selectedComPort=commPorts.get(e.getItem().toString());
+			LOGGER.info(this.selectedComPort+" selected");	
 		}
 	}
 	
 	public void actionRefreshParams(ActionEvent e) {
-		//initializeAvailableParams(e);
-		initializeAvailableParams2();
+		LOGGER.info("reload parameters");
+		initializeAvailableParamsFromFile();
 	}
 	
 	private boolean isAllFieldsSet(boolean checkPath,boolean checkPort,boolean checkValue,boolean checkParam) {
+		LOGGER.info("prevalidation called");
 		boolean isAllSet=false;
 		String value=this.valueTextField.getText();
 		
@@ -543,6 +572,7 @@ public class Application {
 	}
 	
 	private void actionClearErrorText() {
+		LOGGER.info("clear message");
 		this.errorTextField.setText("");
 		this.errorTextField.setForeground(Color.black);
 	}
@@ -555,6 +585,14 @@ public class Application {
 	private void setSuccessText(String text) {
 		this.errorTextField.setForeground(Color.green);
 		this.errorTextField.setText(text);
+	}
+	
+	public void actionOpenWindow(){
+		LOGGER.info("preset personal Settings");
+		//String path="D:\\"+FIRMWARE_TOOLS_FOLDER;
+		//this.selectedPath=new File(path);
+		//this.pathTextField.setText(this.selectedPath.getAbsolutePath());	
+		this.aircraftComboBox.setSelectedItem(START_AIRCRAFT);
 	}
 	
 }
